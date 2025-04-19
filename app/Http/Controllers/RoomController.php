@@ -7,6 +7,8 @@ use App\Models\RoomImage;
 use App\Models\Room;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use App\Models\Reservation;
+use Illuminate\Support\Facades\Auth;
 
 class RoomController extends Controller
 {
@@ -18,12 +20,13 @@ class RoomController extends Controller
 
     public function adminIndex()
     {
-        $rooms = Room::select('room_type', DB::raw('count(*) as total'))
-            ->groupBy('room_type')
+        $rooms = Room::select('rooms_id', 'room_type', DB::raw('SUM(total_room) as total_room'))
+            ->groupBy('rooms_id', 'room_type')
             ->get();
 
         return view('admin.dashboard', compact('rooms'));
     }
+
 
     public function create()
     {
@@ -38,16 +41,17 @@ class RoomController extends Controller
             'total_room' => 'required|integer|min:1',
             'capacity' => 'required|integer|min:1',
             'description' => 'nullable|string',
-            'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $room = Room::create([
-            'rooms_id' => Str::uuid(),
+            'rooms_id' => \Illuminate\Support\Str::uuid(), // Pastikan UUID dibuat
             'room_type' => $request->room_type,
             'price' => $request->price,
             'total_room' => $request->total_room,
             'capacity' => $request->capacity,
             'description' => $request->description,
+            'image' => $request->file('image') ? $request->file('image')->store('room_images', 'public') : null,
         ]);
 
         // Simpan gambar jika ada yang diunggah
@@ -71,6 +75,12 @@ class RoomController extends Controller
         return view('user.show', compact('room'));
     }
 
+    public function Adminshow($id)
+    {
+        $room = Room::with(['facilities', 'images'])->findOrFail($id);
+        return view('admin.show', compact('room'));
+    }
+
 
     public function edit($id)
     {
@@ -85,11 +95,33 @@ class RoomController extends Controller
         return redirect()->route('admin.dashboard')->with('success', 'Room updated successfully!');
     }
 
-    public function destroy($id)
-    {
-        Room::findOrFail($id)->delete();
-        return redirect()->route('admin.dashboard')->with('success', 'Room deleted successfully!');
+    public function destroy($reservation_id)
+{
+    DB::beginTransaction();
+    try {
+        $reservation = Reservation::where('user_id', Auth::id())
+            ->where('status', 'pending')
+            ->where('reservation_id', $reservation_id)
+            ->firstOrFail();
+
+        $room = Room::where('rooms_id', $reservation->rooms_id)->first();
+        if ($room) {
+            $room->increment('total_room', $reservation->total_rooms);
+        }
+
+        $reservation->delete();
+        
+        DB::commit();
+
+        return redirect()->route('user.reservations.index')
+            ->with('success', 'Pemesanan berhasil dibatalkan dan stok kamar dikembalikan.');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return redirect()->back()
+            ->with('error', 'Gagal membatalkan pemesanan: ' . $e->getMessage());
     }
+}
 }
 
 

@@ -1,21 +1,15 @@
 <?php
 
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Receipt;
-use App\Models\Reservation;
 use Illuminate\Support\Str;
+use App\Mail\SendReceiptQr;
+use Illuminate\Support\Facades\Mail;
 
 class ReceiptController extends Controller
 {
-    public function index()
-    {
-        $receipts = Receipt::all();
-        return response()->json($receipts);
-    }
-
     public function store(Request $request)
     {
         $request->validate([
@@ -29,68 +23,21 @@ class ReceiptController extends Controller
             'receipt_code' => $request->receipt_code,
         ]);
 
+        $qrUrl = route('scan.qr.confirm', $receipt->id);
+        Mail::to($receipt->reservation->user->email)->send(new SendReceiptQr($receipt, $receipt->reservation));
+
         return response()->json($receipt, 201);
     }
 
-    public function show($id)
+    public function confirmScan($receiptId)
     {
-        $receipt = Receipt::findOrFail($id);
-        return response()->json($receipt);
-    }
+        $receipt = Receipt::with('reservation')->findOrFail($receiptId);
 
-    public function destroy($id)
-    {
-        $receipt = Receipt::findOrFail($id);
-        $receipt->delete();
-        return response()->json(['message' => 'Receipt deleted successfully']);
+        $receipt->reservation->update(['status' => 'confirmed']);
+
+        return redirect()->route('scan.success')->with([
+            'receipt_code' => $receipt->receipt_code,
+            'reservation_id' => $receipt->reservation->reservation_id
+        ]);
     }
 }
-
-// namespace App\Http\Controllers;
-
-// use Illuminate\Http\Request;
-// use App\Models\Receipt;
-// use Illuminate\Support\Str;
-
-// class ReceiptController extends Controller
-// {
-//     public function index()
-//     {
-//         return response()->json(Receipt::all());
-//     }
-
-//     public function store(Request $request)
-//     {
-//         $request->validate([
-//             'reservation_id' => 'required|exists:reservations,id',
-//             'receipt_code' => 'required|string|max:255|unique:receipts,receipt_code',
-//         ]);
-
-//         $receipt = Receipt::create([
-//             'id' => Str::uuid(),
-//             'reservation_id' => $request->reservation_id,
-//             'receipt_code' => $request->receipt_code,
-//         ]);
-
-//         return response()->json(['message' => 'Receipt created', 'data' => $receipt], 201);
-//     }
-
-//     public function show($id)
-//     {
-//         return response()->json(Receipt::findOrFail($id));
-//     }
-
-//     public function update(Request $request, $id)
-//     {
-//         $receipt = Receipt::findOrFail($id);
-//         $receipt->update($request->only(['reservation_id', 'receipt_code']));
-
-//         return response()->json(['message' => 'Receipt updated', 'data' => $receipt]);
-//     }
-
-//     public function destroy($id)
-//     {
-//         Receipt::findOrFail($id)->delete();
-//         return response()->json(['message' => 'Receipt deleted']);
-//     }
-// }

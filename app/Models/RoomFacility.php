@@ -9,7 +9,11 @@ class RoomFacility extends Model
 {
     use HasFactory;
 
-    protected $table = 'room_facilities';
+    protected $table = 'room_facilities'; // Nama tabel
+
+    protected $primaryKey = 'id'; // Primary Key
+
+    public $incrementing = true; // Auto Increment ID
 
     protected $fillable = [
         'rooms_id',
@@ -18,6 +22,6 @@ class RoomFacility extends Model
 
     public function room()
     {
-        return $this->belongsTo(Room::class, 'rooms_id', 'rooms_id');
+        return $this->belongsTo(Room::class, 'rooms_id');
     }
 }

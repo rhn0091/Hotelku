@@ -14,6 +14,8 @@ class Room extends Model
     protected $primaryKey = 'rooms_id';
     public $incrementing = false;
     protected $keyType = 'string';
+    protected $guarded = [];
+    public $timestamps = false;
 
     protected $fillable = [
         'rooms_id',

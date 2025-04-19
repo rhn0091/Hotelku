@@ -14,13 +14,13 @@ class Reservation extends Model
 
     protected $primaryKey = 'reservation_id';
 
-    public $incrementing = false; 
+    public $incrementing = false;
 
     protected $keyType = 'string';
 
     protected $fillable = [
         'user_id',
-        'room_id',
+        'rooms_id',
         'check_in_date',
         'check_out_date',
         'total_rooms',
@@ -40,11 +40,12 @@ class Reservation extends Model
         parent::boot();
 
         static::creating(function ($model) {
-            if (empty($model->id)) {
-                $model->id = (string) Str::uuid();
+            if (empty($model->reservation_id)) { // Pastikan pakai reservation_id, bukan id
+                $model->reservation_id = (string) Str::uuid();
             }
         });
     }
+
 
     // Relasi dengan User
     public function user()
@@ -52,9 +53,8 @@ class Reservation extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // Relasi dengan Room
     public function room()
     {
-        return $this->belongsTo(Room::class, 'room_id');
+        return $this->belongsTo(Room::class, 'rooms_id'); // Ganti dari rooms_id ke room_id
     }
 }

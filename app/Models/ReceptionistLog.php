@@ -26,4 +26,14 @@ class ReceptionistLog extends Model
     {
         return $this->belongsTo(Reservation::class, 'reservation_id', 'reservation_id');
     }
+
+    public function room()
+    {
+        return $this->belongsTo(Room::class, 'rooms_id', 'rooms_id');
+    }
+
+    public function receipt()
+    {
+        return $this->hasOne(Receipt::class, 'reservation_id', 'reservation_id');
+    }
 }
